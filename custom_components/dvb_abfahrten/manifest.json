@@ -1,13 +1,17 @@
 {
   "domain": "dvb_abfahrten",
   "name": "DVB Abfahrten",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "documentation": "https://github.com/eventma-eventvermietung/ha-dvb-abfahrten",
   "issue_tracker": "https://github.com/eventma-eventvermietung/ha-dvb-abfahrten/issues",
   "codeowners": [
     "@eventma-eventvermietung"
   ],
   "config_flow": true,
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "requirements": []
