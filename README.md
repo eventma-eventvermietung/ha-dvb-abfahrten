@@ -105,6 +105,15 @@ auch mit dem vollständigen POST-Rumpf der DVB-App – stand dort ausnahmslos
 `Unknown`. Die Übersetzung ist trotzdem enthalten: sobald der VVO Daten
 liefert, erscheinen sie ohne Änderung am Code.
 
+## Symbol
+
+Das Marken-Symbol liegt unter `custom_components/dvb_abfahrten/brand/` und
+wird von Home Assistant ab 2026.3 direkt von dort ausgeliefert – ein Umweg
+über die Marken-Sammlung ist dafür nicht nötig.
+
+Es ist ein **eigener Entwurf**: weder das Logo der DVB noch das amtliche
+Haltestellenzeichen, beides ist geschützt.
+
 ## Dank
 
 An den **Verkehrsverbund Oberelbe** für eine offene Schnittstelle ohne

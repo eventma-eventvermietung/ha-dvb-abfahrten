@@ -1,7 +1,7 @@
 {
   "domain": "dvb_abfahrten",
   "name": "DVB Abfahrten",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/eventma-eventvermietung/ha-dvb-abfahrten",
   "issue_tracker": "https://github.com/eventma-eventvermietung/ha-dvb-abfahrten/issues",
   "codeowners": [
