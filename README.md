@@ -63,8 +63,9 @@ entities:
   - sensor.postplatz_dresden_abfahrten
 ```
 
-Was nicht mehr zu schaffen ist, wird blass dargestellt und die Minutenzahl
-durchgestrichen – die Bahn fährt ja, nur eben ohne einen.
+**Abfahrten, die man zu Fuß nicht mehr erreicht, werden ausgeblendet.** Die
+Integration holt deshalb mehr Abfahrten, als angezeigt werden – sonst blieben
+von acht angeforderten Zeilen drei übrig, sobald die ersten schon weg sind.
 
 ## Der Fußweg
 

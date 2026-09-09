@@ -68,10 +68,6 @@ class DvbTafelCard extends HTMLElement {
           font-variant-numeric: tabular-nums; font-weight: 600;
           text-align: right; white-space: nowrap;
         }
-        /* Was nicht mehr zu schaffen ist, tritt zurueck - es soll lesbar
-           bleiben, aber nicht mit dem konkurrieren, worauf es ankommt. */
-        .zeile.weg-zu-knapp { opacity: .42; }
-        .zeile.weg-zu-knapp .ab { text-decoration: line-through; }
         .verspaetet { color: var(--warning-color, #e8a33d); font-weight: 600; }
         .aus { color: var(--error-color, #db4437); font-weight: 600; }
         .leer { color: var(--secondary-text-color); font-size: .85rem; padding: 4px 0; }
@@ -147,16 +143,23 @@ class DvbTafelCard extends HTMLElement {
           : "Fußweg unbekannt"}</span>
       </div>`;
 
-      const fahrten = a.abfahrten || [];
-      if (!fahrten.length) {
+      // Nur noch, was zu schaffen ist (Nutzerentscheidung 2026-09-10). Die
+      // Erreichbarkeit wird HIER bestimmt und nicht aus dem Attribut
+      // uebernommen: das ist vom Server aus EINEM Standort gerechnet, hier
+      // zaehlt der des angemeldeten Benutzers.
+      const alle = a.abfahrten || [];
+      const fahrten = (weg
+        ? alle.filter((f) => f.faellt_aus || f.minuten >= weg.minuten)
+        : alle).slice(0, a.anzeigen || 8);
+
+      if (!alle.length) {
         html += `<div class="leer">keine Abfahrten</div>`;
+      } else if (!fahrten.length) {
+        html += `<div class="leer">keine Abfahrt zu Fuß erreichbar `
+          + `(${weg.minuten} Min. Weg, nächste in ${alle[0].minuten} Min.)</div>`;
       }
       for (const f of fahrten) {
         const [hg, vg] = FARBEN[f.verkehrsmittel] || ["#6b7280", "#ffffff"];
-        // Erreichbarkeit hier neu bestimmen, nicht das Attribut nehmen: das
-        // ist vom Server aus EINEM Standort gerechnet, hier zaehlt der des
-        // angemeldeten Benutzers.
-        const knapp = weg && !f.faellt_aus && f.minuten < weg.minuten;
         let ab;
         if (f.faellt_aus) {
           ab = `<span class="aus">fällt aus</span>`;
@@ -180,7 +183,7 @@ class DvbTafelCard extends HTMLElement {
         // Bleibt leer, solange der VVO die Auslastung nicht befuellt.
         if (f.auslastung) { dazu.push(this._escape(f.auslastung)); }
 
-        html += `<div class="zeile${knapp ? " weg-zu-knapp" : ""}">
+        html += `<div class="zeile">
           <span class="linie" style="background:${hg};color:${vg}">${this._escape(f.linie)}</span>
           <span class="ziel">${this._escape(f.ziel)}</span>
           <span class="ab">${ab}</span>

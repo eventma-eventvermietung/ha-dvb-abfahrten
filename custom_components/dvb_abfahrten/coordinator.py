@@ -22,12 +22,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import VvoApi, VvoFehler
 from .const import (
     ABSTAND,
+    HOECHSTZAHL,
     CONF_ANZAHL,
     CONF_HALTESTELLEN,
     CONF_STANDORT,
     DOMAIN,
     STANDARD_ANZAHL,
     UMWEG_SCHWELLE,
+    VORRAT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -177,7 +179,8 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         fehler: list[str] = []
         for h in self.haltestellen:
             try:
-                tafel = await self.api.hole_abfahrten(h["id"], self.anzahl)
+                tafel = await self.api.hole_abfahrten(
+                    h["id"], min(self.anzahl + VORRAT, HOECHSTZAHL))
             except VvoFehler as f:
                 fehler.append("%s: %s" % (h["name"], f))
                 continue

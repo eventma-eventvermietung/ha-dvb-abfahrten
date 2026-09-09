@@ -86,6 +86,9 @@ class HaltestelleSensor(CoordinatorEntity[DvbCoordinator], SensorEntity):
             "ort": self._ort,
             "haltestelle_id": self._id,
             "anzahl": len(abfahrten),
+            # Wieviele Zeilen die Tafel zeigen soll. Geholt werden mehr,
+            # weil die nicht mehr erreichbaren herausfallen.
+            "anzeigen": self.coordinator.anzahl,
             "naechste": (
                 "%s %s in %d Min." % (naechste["linie"], naechste["ziel"],
                                       naechste["minuten"])

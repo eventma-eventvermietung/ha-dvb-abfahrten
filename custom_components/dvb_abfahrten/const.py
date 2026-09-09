@@ -41,6 +41,12 @@ UMWEG_SCHWELLE = 150
 
 STANDARD_ANZAHL = 8
 
+# Wieviele Abfahrten ZUSAETZLICH geholt werden. Die Tafel zeigt nur noch
+# das, was zu Fuss zu schaffen ist - ohne Vorrat blieben von acht
+# angeforderten Zeilen drei uebrig, sobald die ersten schon weg sind.
+VORRAT = 8
+HOECHSTZAHL = 30
+
 # Die Schnittstelle liefert englische Bezeichner; angezeigt wird deutsch.
 VERKEHRSMITTEL = {
     "Tram": "Straßenbahn",
