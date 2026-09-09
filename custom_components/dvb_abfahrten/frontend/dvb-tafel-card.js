@@ -30,6 +30,16 @@ const FARBEN = {
 class DvbTafelCard extends HTMLElement {
   setConfig(config) {
     this._config = config || {};
+    this._aufbauen();
+    this._zeichne();
+  }
+
+  // Der Schattenbaum darf nur EINMAL entstehen. Home Assistant ruft
+  // setConfig erneut auf, sobald sich die Dashboard-Konfiguration aendert -
+  // ein zweites attachShadow wirft dann NotSupportedError, und die Karte
+  // zeigt nur noch "Konfigurationsfehler".
+  _aufbauen() {
+    if (this.shadowRoot) { return; }
     this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
       <style>
