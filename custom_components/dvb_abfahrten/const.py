@@ -16,6 +16,14 @@ URL_ABFAHRTEN = BASIS + "/dm"
 # zwischengespeichert und nur neu berechnet, wenn man sich bewegt hat.
 URL_FUSSWEG = "https://routing.openstreetmap.de/routed-foot/route/v1/foot"
 
+# Rueckwaerts-Geokodierung, um den Ausgangspunkt als Adresse zu zeigen
+# statt als Namen. Nominatim verlangt eine aussagekraeftige Kennung mit
+# Kontakt - anonyme Abrufe werden geblockt. Ein Abruf faellt nur an, wenn
+# sich der Standort ueberhaupt bewegt hat.
+URL_ADRESSE = "https://nominatim.openstreetmap.org/reverse"
+KENNUNG = ("ha-dvb-abfahrten "
+           "(+https://github.com/eventma-eventvermietung/ha-dvb-abfahrten)")
+
 # Einmal pro Minute. Haeufiger waere sinnlos: die Echtzeitdaten des VVO
 # werden selbst nicht schneller fortgeschrieben, und ein Abfahrtsbrett, das
 # man ansieht, wird ohnehin beim Oeffnen neu geladen.

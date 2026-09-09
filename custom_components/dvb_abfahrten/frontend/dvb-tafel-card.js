@@ -142,7 +142,8 @@ class DvbTafelCard extends HTMLElement {
       html += `<div class="halt"><div class="kopf">
         <span class="name">${this._escape(a.haltestelle || z.entity_id)}</span>
         <span class="weg">${weg
-          ? `${weg.minuten} Min. zu Fuß · ${weg.meter} m ab ${this._escape(weg.quelle)}`
+          ? `${weg.minuten} Min. zu Fuß · ${weg.meter} m ab `
+            + this._escape(weg.adresse || weg.quelle)
           : "Fußweg unbekannt"}</span>
       </div>`;
 
@@ -171,13 +172,10 @@ class DvbTafelCard extends HTMLElement {
           dazu.push(`<span class="steig">${this._escape(f.steig_art || "Steig")} `
             + `${this._escape(f.steig)}</span>`);
         }
+        // Nur die Verspaetung, nicht die Planzeit: dass die Bahn um 00:18
+        // haette kommen sollen, hilft niemandem mehr, der auf sie wartet.
         if (f.verspaetung > 0 && !f.faellt_aus) {
-          const plan = f.geplant
-            ? new Date(f.geplant).toLocaleTimeString("de-DE",
-                { hour: "2-digit", minute: "2-digit" })
-            : null;
-          dazu.push(`<span class="verspaetet">${f.verspaetung} Min. später</span>`
-            + (plan ? ` (geplant ${plan})` : ""));
+          dazu.push(`<span class="verspaetet">${f.verspaetung} Min. später</span>`);
         }
         // Bleibt leer, solange der VVO die Auslastung nicht befuellt.
         if (f.auslastung) { dazu.push(this._escape(f.auslastung)); }

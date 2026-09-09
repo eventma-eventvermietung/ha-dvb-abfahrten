@@ -73,9 +73,14 @@ Berechnet über den Fußgänger-Router von OpenStreetMap
 des **angemeldeten Benutzers**, sofern eine `person` mit Standort dazu
 existiert – sonst der in Home Assistant hinterlegte Wohnort.
 
+Angezeigt wird nicht der Name des Benutzers, sondern die **Adresse**, an der
+der Weg beginnt – ermittelt über Nominatim. Der Name sagt nichts darüber, wo
+man gerade steht.
+
 Die Strecke wird zwischengespeichert und nur neu berechnet, wenn der
-Ausgangspunkt sich um mehr als 150 Meter verschoben hat. Ein fremder,
-kostenloser Dienst ist kein Selbstbedienungsladen.
+Ausgangspunkt sich um mehr als 150 Meter verschoben hat; die Adresse wird je
+Punkt einmal erfragt. Ein fremder, kostenloser Dienst ist kein
+Selbstbedienungsladen.
 
 ## Sensoren
 

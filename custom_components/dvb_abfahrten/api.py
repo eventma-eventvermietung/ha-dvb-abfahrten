@@ -16,6 +16,8 @@ from aiohttp import ClientSession
 
 from .const import (
     AUSLASTUNG,
+    KENNUNG,
+    URL_ADRESSE,
     STEIG_TYP,
     URL_ABFAHRTEN,
     URL_FUSSWEG,
@@ -52,11 +54,11 @@ class VvoApi:
     def __init__(self, sitzung: ClientSession) -> None:
         self._sitzung = sitzung
 
-    async def _hole_roh(self, url: str,
-                        parameter: dict[str, Any]) -> dict[str, Any]:
+    async def _hole_roh(self, url: str, parameter: dict[str, Any],
+                        kopf: dict[str, str] | None = None) -> dict[str, Any]:
         """Abruf ohne die VVO-eigene Statuspruefung (fuer fremde Dienste)."""
         try:
-            async with self._sitzung.get(url, params=parameter,
+            async with self._sitzung.get(url, params=parameter, headers=kopf,
                                          timeout=20) as antwort:
                 antwort.raise_for_status()
                 return await antwort.json(content_type=None)
@@ -120,6 +122,28 @@ class VvoApi:
             # mehr, als eine halbe Minute zu frueh dazustehen.
             "minuten": int(math.ceil(wege[0]["duration"] / 60)),
         }
+
+    async def adresse(self, punkt: tuple[float, float]) -> str | None:
+        """Klartext-Adresse zu einem Punkt.
+
+        Der Name des Benutzers sagt nichts darueber, WO der Weg beginnt -
+        die Adresse schon. Gefragt wird nur, wenn ohnehin eine neue Strecke
+        berechnet wird.
+        """
+        try:
+            daten = await self._hole_roh(
+                URL_ADRESSE,
+                {"format": "jsonv2", "zoom": "18", "addressdetails": "1",
+                 "lat": "%.6f" % punkt[0], "lon": "%.6f" % punkt[1]},
+                {"User-Agent": KENNUNG})
+        except VvoFehler:
+            return None
+        a = daten.get("address") or {}
+        strasse = a.get("road") or a.get("pedestrian") or a.get("footway")
+        if strasse and a.get("house_number"):
+            return "%s %s" % (strasse, a["house_number"])
+        return (strasse or a.get("suburb") or a.get("neighbourhood")
+                or a.get("city_district") or a.get("city"))
 
     async def hole_abfahrten(self, haltestelle_id: str,
                              anzahl: int) -> dict[str, Any]:

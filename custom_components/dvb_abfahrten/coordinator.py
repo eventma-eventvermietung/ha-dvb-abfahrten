@@ -59,6 +59,10 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # OSM-Dienst ist kein Selbstbedienungsladen, und der Weg von zuhause
         # zur Haltestelle aendert sich nie.
         self._fussweg: dict[tuple[str, str], dict[str, Any]] = {}
+        # Adressen je Ausgangspunkt, auf vier Nachkommastellen gerundet
+        # (rund elf Meter) - feiner braucht es niemand, und Nominatim soll
+        # nicht fuer jeden Meter Bewegung befragt werden.
+        self._adressen: dict[tuple[float, float], str | None] = {}
 
     @property
     def haltestellen(self) -> list[dict[str, Any]]:
@@ -95,6 +99,13 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if benutzer and benutzer.name:
                     punkte[benutzer.name] = ort
         return punkte
+
+    async def _adresse(self, punkt: tuple[float, float]) -> str | None:
+        """Adresse eines Ausgangspunkts, gemerkt je Punkt."""
+        schluessel = (round(punkt[0], 4), round(punkt[1], 4))
+        if schluessel not in self._adressen:
+            self._adressen[schluessel] = await self.api.adresse(punkt)
+        return self._adressen[schluessel]
 
     async def _koordinaten_nachtragen(self) -> None:
         """Aeltere Eintraege kennen die Koordinaten noch nicht."""
@@ -138,6 +149,11 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     ergebnis[name] = alt["strecke"]
                 continue
             if strecke:
+                # Die Adresse gehoert zum Ausgangspunkt, nicht zur
+                # Haltestelle - deshalb einmal je Punkt merken und nicht
+                # je Haltestelle neu erfragen.
+                strecke = dict(strecke)
+                strecke["adresse"] = await self._adresse(von)
                 self._fussweg[schluessel] = {"von": von, "strecke": strecke}
                 ergebnis[name] = strecke
         return ergebnis
