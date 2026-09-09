@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Haltestelle suchen",
+        "description": "Name der Haltestelle eingeben, zum Beispiel \"Postplatz\" oder \"Nürnberger Platz\". Gesucht wird im gesamten Verkehrsverbund Oberelbe.",
+        "data": {
+          "suche": "Haltestelle"
+        }
+      },
+      "auswahl": {
+        "title": "Haltestellen auswählen",
+        "description": "{anzahl} Treffer. Es können mehrere ausgewählt werden – jede bekommt einen eigenen Sensor.",
+        "data": {
+          "haltestellen": "Haltestellen",
+          "anzahl": "Abfahrten je Haltestelle"
+        }
+      }
+    },
+    "error": {
+      "keine_verbindung": "Die VVO-Schnittstelle ist nicht erreichbar.",
+      "nichts_gefunden": "Zu diesem Namen wurde keine Haltestelle gefunden."
+    },
+    "abort": {
+      "already_configured": "Diese Zusammenstellung von Haltestellen ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Abfahrten anpassen",
+        "description": "Eingerichtet sind: {bisher}.\n\nSuchfeld leer lassen, um nur Anzahl oder Standort zu ändern. Ein Suchbegriff führt zur Auswahl, in der die bisherigen Haltestellen weiterhin angehakt sind.\n\nDer Fußweg wird ab Zuhause berechnet, solange kein Standort gewählt ist.",
+        "data": {
+          "suche": "Weitere Haltestelle suchen (optional)",
+          "anzahl": "Abfahrten je Haltestelle",
+          "standort": "Standort für den Fußweg (leer = Zuhause)"
+        }
+      },
+      "auswahl": {
+        "title": "Haltestellen auswählen",
+        "description": "Angehakt bleibt, was bereits eingerichtet war. Wer einen Haken entfernt, entfernt die Haltestelle.",
+        "data": {
+          "haltestellen": "Haltestellen",
+          "anzahl": "Abfahrten je Haltestelle"
+        }
+      }
+    },
+    "error": {
+      "keine_verbindung": "Die VVO-Schnittstelle ist nicht erreichbar.",
+      "nichts_gefunden": "Zu diesem Namen wurde keine Haltestelle gefunden."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "abfahrten": {
+        "name": "Abfahrten"
+      }
+    }
+  }
+}

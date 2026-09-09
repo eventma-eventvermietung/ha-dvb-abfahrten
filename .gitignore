@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+# Wartet auf `gh auth refresh -h github.com -s workflow` - ohne diesen
+# Bereich weist GitHub jeden Push zurueck, der eine Workflow-Datei anlegt.
+.github/workflows/

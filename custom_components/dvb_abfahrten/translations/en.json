@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Search stop",
+        "description": "Enter the name of a stop.",
+        "data": {
+          "suche": "Stop"
+        }
+      },
+      "auswahl": {
+        "title": "Select stops",
+        "description": "{anzahl} results. Several can be selected.",
+        "data": {
+          "haltestellen": "Stops",
+          "anzahl": "Departures per stop"
+        }
+      }
+    },
+    "error": {
+      "keine_verbindung": "The VVO service is unreachable.",
+      "nichts_gefunden": "No stop found for this name."
+    },
+    "abort": {
+      "already_configured": "This set of stops is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Adjust departures",
+        "description": "Configured: {bisher}.",
+        "data": {
+          "suche": "Search another stop (optional)",
+          "anzahl": "Departures per stop",
+          "standort": "Location for walking time (empty = home)"
+        }
+      },
+      "auswahl": {
+        "title": "Select stops",
+        "description": "Already configured stops stay ticked.",
+        "data": {
+          "haltestellen": "Stops",
+          "anzahl": "Departures per stop"
+        }
+      }
+    },
+    "error": {
+      "keine_verbindung": "The VVO service is unreachable.",
+      "nichts_gefunden": "No stop found for this name."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "abfahrten": {
+        "name": "Departures"
+      }
+    }
+  }
+}
