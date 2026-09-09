@@ -32,8 +32,10 @@
         "description": "Configured: {bisher}.",
         "data": {
           "suche": "Search another stop (optional)",
-          "anzahl": "Departures per stop",
-          "standort": "Location for walking time (empty = home)"
+          "anzahl": "Number of departures (for “fixed number”)",
+          "standort": "Location for walking time (empty = home)",
+          "modus": "What should the board show?",
+          "minuten": "Time window (for “next minutes”)"
         }
       },
       "auswahl": {
@@ -54,6 +56,14 @@
     "sensor": {
       "abfahrten": {
         "name": "Departures"
+      }
+    }
+  },
+  "selector": {
+    "modus": {
+      "options": {
+        "anzahl": "a fixed number of departures",
+        "zeitfenster": "all departures in the next minutes"
       }
     }
   }

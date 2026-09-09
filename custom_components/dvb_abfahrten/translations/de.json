@@ -32,8 +32,10 @@
         "description": "Eingerichtet sind: {bisher}.\n\nSuchfeld leer lassen, um nur Anzahl oder Standort zu ändern. Ein Suchbegriff führt zur Auswahl, in der die bisherigen Haltestellen weiterhin angehakt sind.\n\nDer Fußweg wird ab Zuhause berechnet, solange kein Standort gewählt ist.",
         "data": {
           "suche": "Weitere Haltestelle suchen (optional)",
-          "anzahl": "Abfahrten je Haltestelle",
-          "standort": "Standort für den Fußweg (leer = Zuhause)"
+          "anzahl": "Anzahl der Abfahrten (bei „feste Anzahl“)",
+          "standort": "Standort für den Fußweg (leer = Zuhause)",
+          "modus": "Was soll die Tafel zeigen?",
+          "minuten": "Zeitfenster (bei „nächste Minuten“)"
         }
       },
       "auswahl": {
@@ -54,6 +56,14 @@
     "sensor": {
       "abfahrten": {
         "name": "Abfahrten"
+      }
+    }
+  },
+  "selector": {
+    "modus": {
+      "options": {
+        "anzahl": "eine feste Anzahl Abfahrten",
+        "zeitfenster": "alle Abfahrten der nächsten Minuten"
       }
     }
   }

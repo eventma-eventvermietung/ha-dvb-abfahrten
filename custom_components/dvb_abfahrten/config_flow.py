@@ -29,11 +29,16 @@ from homeassistant.helpers.selector import (
 from .api import VvoApi, VvoFehler
 from .const import (
     CONF_ANZAHL,
+    CONF_MINUTEN,
+    CONF_MODUS,
     CONF_STANDORT,
     CONF_HALTESTELLEN,
     CONF_SUCHE,
     DOMAIN,
+    MODUS_ANZAHL,
+    MODUS_ZEITFENSTER,
     STANDARD_ANZAHL,
+    STANDARD_MINUTEN,
 )
 
 
@@ -133,6 +138,9 @@ class DvbOptionsFlow(OptionsFlow):
             CONF_HALTESTELLEN, [])
         anzahl = int(self.config_entry.options.get(CONF_ANZAHL, STANDARD_ANZAHL))
         standort = self.config_entry.options.get(CONF_STANDORT)
+        modus = self.config_entry.options.get(CONF_MODUS, MODUS_ANZAHL)
+        minuten = int(self.config_entry.options.get(CONF_MINUTEN,
+                                                    STANDARD_MINUTEN))
         fehler: dict[str, str] = {}
 
         if user_input is not None:
@@ -143,6 +151,8 @@ class DvbOptionsFlow(OptionsFlow):
                 return self.async_create_entry(
                     data={CONF_HALTESTELLEN: bisher,
                           CONF_ANZAHL: int(user_input[CONF_ANZAHL]),
+                          CONF_MODUS: user_input[CONF_MODUS],
+                          CONF_MINUTEN: int(user_input[CONF_MINUTEN]),
                           CONF_STANDORT: user_input.get(CONF_STANDORT)})
             api = VvoApi(async_get_clientsession(self.hass))
             try:
@@ -155,14 +165,29 @@ class DvbOptionsFlow(OptionsFlow):
                 else:
                     self._anzahl = int(user_input[CONF_ANZAHL])
                     self._standort = user_input.get(CONF_STANDORT)
+                    self._modus = user_input[CONF_MODUS]
+                    self._minuten = int(user_input[CONF_MINUTEN])
                     return await self.async_step_auswahl()
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
                 vol.Optional(CONF_SUCHE, default=""): str,
+                # Entweder feste Zeilenzahl oder alles im Zeitfenster.
+                # Home Assistant kann Felder nicht abhaengig voneinander
+                # ausblenden, deshalb stehen beide Werte immer da - welcher
+                # gilt, entscheidet die Betriebsart.
+                vol.Required(CONF_MODUS, default=modus): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[MODUS_ANZAHL, MODUS_ZEITFENSTER],
+                        translation_key=CONF_MODUS,
+                        mode=SelectSelectorMode.LIST)),
                 vol.Required(CONF_ANZAHL, default=anzahl): NumberSelector(
                     NumberSelectorConfig(min=1, max=20, step=1,
+                                         mode=NumberSelectorMode.BOX)),
+                vol.Required(CONF_MINUTEN, default=minuten): NumberSelector(
+                    NumberSelectorConfig(min=5, max=120, step=5,
+                                         unit_of_measurement="min",
                                          mode=NumberSelectorMode.BOX)),
                 # Leer = Fussweg ab Zuhause. Mit Person oder Geraet wird ab
                 # der aktuellen Position gerechnet.
@@ -195,6 +220,8 @@ class DvbOptionsFlow(OptionsFlow):
             return self.async_create_entry(
                 data={CONF_HALTESTELLEN: gewaehlt,
                       CONF_ANZAHL: int(user_input[CONF_ANZAHL]),
+                      CONF_MODUS: getattr(self, "_modus", MODUS_ANZAHL),
+                      CONF_MINUTEN: getattr(self, "_minuten", STANDARD_MINUTEN),
                       CONF_STANDORT: getattr(self, "_standort", None)})
 
         return self.async_show_form(

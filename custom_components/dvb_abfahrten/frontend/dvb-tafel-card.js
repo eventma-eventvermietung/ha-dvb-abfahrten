@@ -137,7 +137,7 @@ class DvbTafelCard extends HTMLElement {
 
       html += `<div class="halt"><div class="kopf">
         <span class="name">${this._escape(a.haltestelle || z.entity_id)}</span>
-        <span class="weg">${weg
+        <span class="weg">${a.zeitfenster ? `nächste ${a.zeitfenster} Min. · ` : ""}${weg
           ? `${weg.minuten} Min. zu Fuß · ${weg.meter} m ab `
             + this._escape(weg.adresse || weg.quelle)
           : "Fußweg unbekannt"}</span>
@@ -148,15 +148,25 @@ class DvbTafelCard extends HTMLElement {
       // uebernommen: das ist vom Server aus EINEM Standort gerechnet, hier
       // zaehlt der des angemeldeten Benutzers.
       const alle = a.abfahrten || [];
-      const fahrten = (weg
+      let fahrten = weg
         ? alle.filter((f) => f.faellt_aus || f.minuten >= weg.minuten)
-        : alle).slice(0, a.anzeigen || 8);
+        : alle;
+      // Zwei Betriebsarten: feste Zeilenzahl oder alles im Zeitfenster.
+      if (a.zeitfenster) {
+        fahrten = fahrten.filter((f) => f.minuten <= a.zeitfenster);
+      } else {
+        fahrten = fahrten.slice(0, a.anzeigen || 8);
+      }
 
       if (!alle.length) {
         html += `<div class="leer">keine Abfahrten</div>`;
       } else if (!fahrten.length) {
-        html += `<div class="leer">keine Abfahrt zu Fuß erreichbar `
-          + `(${weg.minuten} Min. Weg, nächste in ${alle[0].minuten} Min.)</div>`;
+        html += `<div class="leer">`
+          + (a.zeitfenster
+            ? `keine erreichbare Abfahrt in den nächsten ${a.zeitfenster} Minuten`
+            : "keine Abfahrt zu Fuß erreichbar")
+          + (weg ? ` (${weg.minuten} Min. Weg, nächste in ${alle[0].minuten} Min.)` : "")
+          + `</div>`;
       }
       for (const f of fahrten) {
         const [hg, vg] = FARBEN[f.verkehrsmittel] || ["#6b7280", "#ffffff"];

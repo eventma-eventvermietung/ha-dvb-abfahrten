@@ -33,6 +33,15 @@ CONF_HALTESTELLEN = "haltestellen"
 CONF_ANZAHL = "anzahl"
 CONF_SUCHE = "suche"
 CONF_STANDORT = "standort"
+CONF_MODUS = "modus"
+CONF_MINUTEN = "minuten"
+
+# Zwei Betriebsarten. "anzahl" zeigt immer gleich viele Zeilen, egal wie
+# weit sie in die Zukunft reichen; "zeitfenster" zeigt alles, was in den
+# naechsten X Minuten faehrt - abends sind das dann wenige, morgens viele.
+MODUS_ANZAHL = "anzahl"
+MODUS_ZEITFENSTER = "zeitfenster"
+STANDARD_MINUTEN = 30
 
 # Ab wieviel Metern Bewegung der Fussweg neu berechnet wird. Darunter
 # aendert sich die Gehzeit um weniger als eine Minute - und jeder Abruf

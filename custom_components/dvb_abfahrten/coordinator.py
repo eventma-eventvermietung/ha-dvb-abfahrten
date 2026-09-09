@@ -27,7 +27,11 @@ from .const import (
     CONF_HALTESTELLEN,
     CONF_STANDORT,
     DOMAIN,
+    CONF_MINUTEN,
+    CONF_MODUS,
+    MODUS_ZEITFENSTER,
     STANDARD_ANZAHL,
+    STANDARD_MINUTEN,
     UMWEG_SCHWELLE,
     VORRAT,
 )
@@ -73,6 +77,13 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def anzahl(self) -> int:
         return int(self.eintrag.options.get(CONF_ANZAHL, STANDARD_ANZAHL))
+
+    @property
+    def zeitfenster(self) -> int | None:
+        """Minuten, wenn nach Zeit gezeigt wird - sonst None."""
+        if self.eintrag.options.get(CONF_MODUS) != MODUS_ZEITFENSTER:
+            return None
+        return int(self.eintrag.options.get(CONF_MINUTEN, STANDARD_MINUTEN))
 
     async def _ausgangspunkte(self) -> dict[str, tuple[float, float]]:
         """Alle Orte, von denen aus gerechnet wird.
@@ -179,8 +190,12 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         fehler: list[str] = []
         for h in self.haltestellen:
             try:
-                tafel = await self.api.hole_abfahrten(
-                    h["id"], min(self.anzahl + VORRAT, HOECHSTZAHL))
+                # Beim Zeitfenster laesst sich vorher nicht sagen, wieviele
+                # Abfahrten hineinfallen - deshalb der Hoechstwert. Die
+                # Karte schneidet danach zu.
+                grenze = (HOECHSTZAHL if self.zeitfenster
+                          else min(self.anzahl + VORRAT, HOECHSTZAHL))
+                tafel = await self.api.hole_abfahrten(h["id"], grenze)
             except VvoFehler as f:
                 fehler.append("%s: %s" % (h["name"], f))
                 continue

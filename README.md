@@ -47,6 +47,13 @@ Den Ordner `custom_components/dvb_abfahrten` in das eigene
 Später lässt sich über *Konfigurieren* jederzeit eine Haltestelle
 hinzufügen oder entfernen; die bisherigen bleiben dabei ausgewählt.
 
+Dort steht auch, **was die Tafel zeigen soll**:
+
+| Betriebsart | Wirkung |
+|---|---|
+| **feste Anzahl** | immer gleich viele Zeilen, egal wie weit sie reichen |
+| **nächste Minuten** | alles, was in den nächsten *x* Minuten fährt – abends wenige Zeilen, morgens viele |
+
 ## Die Karte
 
 ```yaml
