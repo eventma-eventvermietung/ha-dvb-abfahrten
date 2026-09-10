@@ -86,6 +86,21 @@ type: custom:dvb-tafel-card
 naehe: false
 ```
 
+Für ein **Wandpanel ohne Scrollen** gibt es zwei weitere Optionen:
+
+```yaml
+type: custom:dvb-tafel-card
+naehe: false
+fussweg_von: Zuhause   # Weg immer ab Zuhause, egal wer angemeldet ist
+max_zeilen: 5          # höchstens so viele Abfahrten, festes Höhenbudget
+```
+
+| Option | Wirkung |
+|---|---|
+| `naehe` | `false` blendet „In deiner Nähe“ aus |
+| `fussweg_von` | fester Ausgangspunkt für Fußweg und Erreichbarkeit (z. B. `Zuhause`) |
+| `max_zeilen` | Höchstzahl angezeigter Abfahrten, auch im Zeitfenster-Betrieb |
+
 ## Der Fußweg
 
 Berechnet über den Fußgänger-Router von OpenStreetMap

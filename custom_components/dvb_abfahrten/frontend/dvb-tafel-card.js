@@ -30,7 +30,7 @@ const FARBEN = {
 // Die Version steht in der Konsole, sobald die Datei laeuft. Damit ist mit
 // einem Blick zu sagen, WELCHE Fassung ein Browser tatsaechlich ausfuehrt -
 // genau die Frage, an der die letzte Fehlersuche haengenblieb.
-const VERSION = "1.1.0";
+const VERSION = "1.1.1";
 console.info("%c DVB-Tafel %c " + VERSION + " ",
              "background:#f6c700;color:#1a1a1a;font-weight:700",
              "background:#1a1a1a;color:#f6c700");
@@ -167,6 +167,10 @@ class DvbTafelCard extends HTMLElement {
 
   _fussweg(attr) {
     const wege = attr.fusswege || {};
+    // Fester Ausgangspunkt je Karte, z. B. `fussweg_von: Zuhause` auf einem
+    // Wandpanel: das haengt zu Hause, egal wer gerade angemeldet ist.
+    const fest = this._config.fussweg_von;
+    if (fest && wege[fest]) return { ...wege[fest], quelle: fest };
     const benutzer = this._hass.user && this._hass.user.name;
     // Erst der angemeldete Benutzer, dann Zuhause. Steht der Benutzer nicht
     // in der Liste (kein Standort freigegeben), ist Zuhause die ehrlichste
@@ -252,6 +256,11 @@ class DvbTafelCard extends HTMLElement {
         fahrten = fahrten.filter((f) => f.minuten <= a.zeitfenster);
       } else {
         fahrten = fahrten.slice(0, a.anzeigen || 8);
+      }
+      // Hoechstzahl je Karte - ein Wandpanel ohne Scrollen hat ein festes
+      // Hoehenbudget, auch im Zeitfenster-Betrieb.
+      if (this._config.max_zeilen) {
+        fahrten = fahrten.slice(0, this._config.max_zeilen);
       }
 
       if (!alle.length) {
