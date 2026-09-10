@@ -30,7 +30,7 @@ const FARBEN = {
 // Die Version steht in der Konsole, sobald die Datei laeuft. Damit ist mit
 // einem Blick zu sagen, WELCHE Fassung ein Browser tatsaechlich ausfuehrt -
 // genau die Frage, an der die letzte Fehlersuche haengenblieb.
-const VERSION = "1.1.1";
+const VERSION = "1.1.2";
 console.info("%c DVB-Tafel %c " + VERSION + " ",
              "background:#f6c700;color:#1a1a1a;font-weight:700",
              "background:#1a1a1a;color:#f6c700");
