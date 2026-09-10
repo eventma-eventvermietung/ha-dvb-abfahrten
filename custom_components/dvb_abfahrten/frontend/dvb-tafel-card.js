@@ -27,11 +27,27 @@ const FARBEN = {
   "Seilbahn": ["#8b5cf6", "#ffffff"],
 };
 
+// Die Version steht in der Konsole, sobald die Datei laeuft. Damit ist mit
+// einem Blick zu sagen, WELCHE Fassung ein Browser tatsaechlich ausfuehrt -
+// genau die Frage, an der die letzte Fehlersuche haengenblieb.
+const VERSION = "1.0.8";
+console.info("%c DVB-Tafel %c " + VERSION + " ",
+             "background:#f6c700;color:#1a1a1a;font-weight:700",
+             "background:#1a1a1a;color:#f6c700");
+
 class DvbTafelCard extends HTMLElement {
   setConfig(config) {
-    this._config = config || {};
-    this._aufbauen();
-    this._zeichne();
+    // NIE werfen. Home Assistant zeigt fuer jeden Fehler hier nur den roten
+    // Kasten "Konfigurationsfehler" und verschluckt den Grund - drei
+    // Fehlersuchen sind daran gescheitert. Also selbst abfangen und lesbar
+    // in die Karte schreiben.
+    try {
+      this._config = config || {};
+      this._aufbauen();
+      this._zeichne();
+    } catch (e) {
+      this._zeigeFehler("setConfig", e);
+    }
   }
 
   // Der Schattenbaum darf nur EINMAL entstehen. Home Assistant ruft
@@ -87,7 +103,25 @@ class DvbTafelCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._zeichne();
+    try {
+      this._zeichne();
+    } catch (e) {
+      this._zeigeFehler("hass", e);
+    }
+  }
+
+  _zeigeFehler(wo, e) {
+    const text = "DVB-Tafel " + VERSION + ", Fehler in " + wo + ": " +
+      (e && e.message ? e.message : String(e));
+    console.error(text, e);
+    try {
+      if (!this.shadowRoot) { this.attachShadow({ mode: "open" }); }
+      const ziel = this.shadowRoot.getElementById("inhalt");
+      const html = `<div style="padding:12px;color:var(--error-color,#c00)">` +
+                   `${this._escape(text)}</div>`;
+      if (ziel) { ziel.innerHTML = html; }
+      else { this.shadowRoot.innerHTML = `<ha-card>${html}</ha-card>`; }
+    } catch (_) { /* dann bleibt wenigstens die Konsole */ }
   }
 
   getCardSize() {
