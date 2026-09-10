@@ -91,6 +91,8 @@ class DvbTafelCard extends HTMLElement {
   }
 
   getCardSize() {
+    // Auch das fragt Home Assistant unter Umstaenden vor dem ersten `hass`.
+    if (!this._hass) return 3;
     return 3 + this._haltestellen().length * 2;
   }
 
@@ -120,6 +122,13 @@ class DvbTafelCard extends HTMLElement {
 
   _zeichne() {
     if (!this.shadowRoot) return;
+    // hass kann NOCH FEHLEN. Home Assistant ruft je nach Ansicht erst
+    // setConfig und dann `hass` auf - und setConfig zeichnet bereits. Ohne
+    // diese Zeile greift _haltestellen() auf this._hass.states zu, wirft
+    // einen TypeError, und die Karte zeigt "Konfigurationsfehler".
+    // Aufgefallen auf dem Wandpanel-Dashboard; auf dem Hauptdashboard war
+    // die Reihenfolge zufaellig umgekehrt und der Fehler blieb verborgen.
+    if (!this._hass) return;
     const ziel = this.shadowRoot.getElementById("inhalt");
     const stellen = this._haltestellen();
     if (!stellen.length) {
