@@ -35,7 +35,9 @@
           "anzahl": "Number of departures (for “fixed number”)",
           "standort": "Location for walking time (empty = home)",
           "modus": "What should the board show?",
-          "minuten": "Time window (for “next minutes”)"
+          "minuten": "Time window (for “next minutes”)",
+          "naehe": "Show nearby stops when away (needs Companion app location)",
+          "naehe_radius": "Search radius for nearby stops"
         }
       },
       "auswahl": {

@@ -35,7 +35,9 @@
           "anzahl": "Anzahl der Abfahrten (bei „feste Anzahl“)",
           "standort": "Standort für den Fußweg (leer = Zuhause)",
           "modus": "Was soll die Tafel zeigen?",
-          "minuten": "Zeitfenster (bei „nächste Minuten“)"
+          "minuten": "Zeitfenster (bei „nächste Minuten“)",
+          "naehe": "Unterwegs die Haltestellen in der Nähe zeigen (braucht Standort der Companion-App)",
+          "naehe_radius": "Suchradius für Haltestellen in der Nähe"
         }
       },
       "auswahl": {

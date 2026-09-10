@@ -17,6 +17,7 @@ from aiohttp import ClientSession
 from .const import (
     AUSLASTUNG,
     KENNUNG,
+    NAEHE_RUNDUNG,
     URL_ADRESSE,
     STEIG_TYP,
     URL_ABFAHRTEN,
@@ -25,7 +26,7 @@ from .const import (
     VERKEHRSMITTEL,
     ZUSTAND,
 )
-from .geo import gk_nach_wgs84
+from .geo import gk_nach_wgs84, wgs84_nach_gk
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,6 +106,39 @@ class VvoApi:
                 "breite": breite,
                 "laenge": laenge,
             })
+        return gefunden
+
+    async def haltestellen_in_der_naehe(self, breite: float, laenge: float,
+                                        anzahl: int) -> list[dict[str, Any]]:
+        """Die naechsten Haltestellen um einen Punkt, nach Entfernung sortiert.
+
+        Die Schnittstelle nimmt dafuer eine Pseudo-Suche `coord:R:H` an -
+        RECHTSWERT ZUERST. Andersherum antwortet sie mit ServiceError
+        (ausprobiert am 2026-09-10).
+
+        Das siebte Feld sieht aus wie eine Entfernung in Metern, IST ABER
+        KEINE LUFTLINIE: 485 gemeldet bei echten 242 m, 545 bei echten 361 m.
+        Es wird deshalb nicht verwendet - die Entfernung rechnet der
+        Aufrufer selbst aus den Koordinaten.
+        """
+        rechts, hoch = wgs84_nach_gk(breite, laenge)
+        rechts = round(rechts / NAEHE_RUNDUNG) * NAEHE_RUNDUNG
+        hoch = round(hoch / NAEHE_RUNDUNG) * NAEHE_RUNDUNG
+        daten = await self._hole(URL_SUCHE, {
+            "format": "json", "limit": str(anzahl), "stopsOnly": "true",
+            "query": "coord:%d:%d" % (rechts, hoch)})
+        gefunden: list[dict[str, Any]] = []
+        for eintrag in daten.get("Points", []):
+            teile = eintrag.split("|")
+            if len(teile) < 6 or not teile[0].isdigit():
+                continue
+            try:
+                b, l = gk_nach_wgs84(float(teile[5]), float(teile[4]))
+            except (ValueError, IndexError):
+                continue
+            gefunden.append({"id": teile[0], "name": teile[3],
+                             "ort": teile[2] or "Dresden",
+                             "breite": b, "laenge": l})
         return gefunden
 
     async def fussweg(self, von: tuple[float, float],

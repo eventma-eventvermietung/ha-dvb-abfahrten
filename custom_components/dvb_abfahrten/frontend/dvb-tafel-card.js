@@ -30,7 +30,7 @@ const FARBEN = {
 // Die Version steht in der Konsole, sobald die Datei laeuft. Damit ist mit
 // einem Blick zu sagen, WELCHE Fassung ein Browser tatsaechlich ausfuehrt -
 // genau die Frage, an der die letzte Fehlersuche haengenblieb.
-const VERSION = "1.0.8";
+const VERSION = "1.1.0";
 console.info("%c DVB-Tafel %c " + VERSION + " ",
              "background:#f6c700;color:#1a1a1a;font-weight:700",
              "background:#1a1a1a;color:#f6c700");
@@ -61,6 +61,11 @@ class DvbTafelCard extends HTMLElement {
       <style>
         ha-card { padding: 12px 14px 8px 14px; }
         .halt { margin-bottom: 14px; }
+        .bereich {
+          font-size: .72rem; font-weight: 600; letter-spacing: .06em;
+          text-transform: uppercase; color: var(--secondary-text-color);
+          margin: 2px 0 8px 0;
+        }
         .halt:last-child { margin-bottom: 6px; }
         .kopf {
           display: flex; align-items: baseline; justify-content: space-between;
@@ -143,6 +148,23 @@ class DvbTafelCard extends HTMLElement {
       .sort();
   }
 
+  // Die Umgebungstafel des ANGEMELDETEN Benutzers, falls er unterwegs ist.
+  // Abschaltbar je Karte mit `naehe: false` - etwa auf einem Wandpanel,
+  // das ohnehin nie unterwegs ist.
+  _naehe() {
+    if (!this._hass || this._config.naehe === false) return null;
+    const benutzer = this._hass.user && this._hass.user.name;
+    if (!benutzer) return null;
+    const id = Object.keys(this._hass.states).find((i) =>
+      i.startsWith("sensor.") && this._hass.states[i].attributes.dvb_naehe);
+    if (!id) return null;
+    const a = this._hass.states[id].attributes;
+    const n = (a.unterwegs || {})[benutzer];
+    if (!n || !(n.haltestellen || []).length) return null;
+    return { ...n, benutzer, zeitfenster: a.zeitfenster,
+             anzeigen: a.anzeigen, abgerufen: a.abgerufen };
+  }
+
   _fussweg(attr) {
     const wege = attr.fusswege || {};
     const benutzer = this._hass.user && this._hass.user.name;
@@ -165,24 +187,55 @@ class DvbTafelCard extends HTMLElement {
     if (!this._hass) return;
     const ziel = this.shadowRoot.getElementById("inhalt");
     const stellen = this._haltestellen();
-    if (!stellen.length) {
+    const naehe = this._naehe();
+    if (!stellen.length && !naehe) {
       ziel.innerHTML = `<div class="leer">Keine Haltestelle eingerichtet.</div>`;
       return;
     }
 
     let html = "";
     let stand = null;
-    for (const id of stellen) {
+
+    // Unterwegs zuerst die Haltestellen um den eigenen Standort - die
+    // eingestellten (meist die von zu Hause) sind dann weit weg und stehen
+    // darunter. Alles laeuft durch dieselbe Zeichenschleife, damit beide
+    // gleich aussehen.
+    const eintraege = [];
+    if (naehe) {
+      stand = naehe.abgerufen || stand;
+      naehe.haltestellen.forEach((t, i) => eintraege.push({
+        titel: t.haltestelle,
+        a: { ...t, zeitfenster: naehe.zeitfenster, anzeigen: naehe.anzeigen },
+        weg: t.weg,
+        kurz: true,
+        bereich: i === 0 ? "In deiner Nähe · ab " +
+          (naehe.adresse || "deinem Standort") : null,
+      }));
+    }
+    stellen.forEach((id, i) => {
       const z = this._hass.states[id];
-      const a = z.attributes;
-      const weg = this._fussweg(a);
+      eintraege.push({
+        titel: z.attributes.haltestelle || z.entity_id,
+        a: z.attributes,
+        weg: this._fussweg(z.attributes),
+        kurz: false,
+        bereich: naehe && i === 0 ? "Eingestellte Haltestellen" : null,
+      });
+    });
+
+    for (const e of eintraege) {
+      const a = e.a;
+      const weg = e.weg;
       stand = a.abgerufen || stand;
+      if (e.bereich) {
+        html += `<div class="bereich">${this._escape(e.bereich)}</div>`;
+      }
 
       html += `<div class="halt"><div class="kopf">
-        <span class="name">${this._escape(a.haltestelle || z.entity_id)}</span>
+        <span class="name">${this._escape(e.titel)}</span>
         <span class="weg">${a.zeitfenster ? `nächste ${a.zeitfenster} Min. · ` : ""}${weg
-          ? `${weg.minuten} Min. zu Fuß · ${weg.meter} m ab `
-            + this._escape(weg.adresse || weg.quelle)
+          ? `${weg.minuten} Min. zu Fuß · ${weg.meter} m`
+            + (e.kurz ? "" : " ab " + this._escape(weg.adresse || weg.quelle))
           : "Fußweg unbekannt"}</span>
       </div>`;
 

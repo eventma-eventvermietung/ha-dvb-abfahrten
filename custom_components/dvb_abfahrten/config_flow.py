@@ -15,6 +15,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -31,6 +32,8 @@ from .const import (
     CONF_ANZAHL,
     CONF_MINUTEN,
     CONF_MODUS,
+    CONF_NAEHE,
+    CONF_NAEHE_RADIUS,
     CONF_STANDORT,
     CONF_HALTESTELLEN,
     CONF_SUCHE,
@@ -39,6 +42,7 @@ from .const import (
     MODUS_ZEITFENSTER,
     STANDARD_ANZAHL,
     STANDARD_MINUTEN,
+    STANDARD_NAEHE_RADIUS,
 )
 
 
@@ -141,6 +145,9 @@ class DvbOptionsFlow(OptionsFlow):
         modus = self.config_entry.options.get(CONF_MODUS, MODUS_ANZAHL)
         minuten = int(self.config_entry.options.get(CONF_MINUTEN,
                                                     STANDARD_MINUTEN))
+        naehe = bool(self.config_entry.options.get(CONF_NAEHE, True))
+        radius = int(self.config_entry.options.get(CONF_NAEHE_RADIUS,
+                                                   STANDARD_NAEHE_RADIUS))
         fehler: dict[str, str] = {}
 
         if user_input is not None:
@@ -153,7 +160,9 @@ class DvbOptionsFlow(OptionsFlow):
                           CONF_ANZAHL: int(user_input[CONF_ANZAHL]),
                           CONF_MODUS: user_input[CONF_MODUS],
                           CONF_MINUTEN: int(user_input[CONF_MINUTEN]),
-                          CONF_STANDORT: user_input.get(CONF_STANDORT)})
+                          CONF_STANDORT: user_input.get(CONF_STANDORT),
+                          CONF_NAEHE: bool(user_input[CONF_NAEHE]),
+                          CONF_NAEHE_RADIUS: int(user_input[CONF_NAEHE_RADIUS])})
             api = VvoApi(async_get_clientsession(self.hass))
             try:
                 self._gefunden = await api.suche_haltestellen(begriff)
@@ -167,6 +176,8 @@ class DvbOptionsFlow(OptionsFlow):
                     self._standort = user_input.get(CONF_STANDORT)
                     self._modus = user_input[CONF_MODUS]
                     self._minuten = int(user_input[CONF_MINUTEN])
+                    self._naehe = bool(user_input[CONF_NAEHE])
+                    self._radius = int(user_input[CONF_NAEHE_RADIUS])
                     return await self.async_step_auswahl()
 
         return self.async_show_form(
@@ -195,6 +206,13 @@ class DvbOptionsFlow(OptionsFlow):
                              description={"suggested_value": standort}):
                     EntitySelector(EntitySelectorConfig(
                         domain=["person", "device_tracker"])),
+                # Unterwegs die naechsten Haltestellen um den eigenen
+                # Standort zeigen. Braucht die Companion-App mit Standort.
+                vol.Required(CONF_NAEHE, default=naehe): BooleanSelector(),
+                vol.Required(CONF_NAEHE_RADIUS, default=radius): NumberSelector(
+                    NumberSelectorConfig(min=200, max=3000, step=100,
+                                         unit_of_measurement="m",
+                                         mode=NumberSelectorMode.BOX)),
             }),
             errors=fehler,
             description_placeholders={
@@ -222,7 +240,10 @@ class DvbOptionsFlow(OptionsFlow):
                       CONF_ANZAHL: int(user_input[CONF_ANZAHL]),
                       CONF_MODUS: getattr(self, "_modus", MODUS_ANZAHL),
                       CONF_MINUTEN: getattr(self, "_minuten", STANDARD_MINUTEN),
-                      CONF_STANDORT: getattr(self, "_standort", None)})
+                      CONF_STANDORT: getattr(self, "_standort", None),
+                      CONF_NAEHE: getattr(self, "_naehe", True),
+                      CONF_NAEHE_RADIUS: getattr(self, "_radius",
+                                                 STANDARD_NAEHE_RADIUS)})
 
         return self.async_show_form(
             step_id="auswahl",

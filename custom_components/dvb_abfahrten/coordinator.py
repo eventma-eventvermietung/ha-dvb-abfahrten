@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from typing import Any
 
 from aiohttp import ClientSession
@@ -29,7 +30,14 @@ from .const import (
     DOMAIN,
     CONF_MINUTEN,
     CONF_MODUS,
+    CONF_NAEHE,
+    CONF_NAEHE_RADIUS,
     MODUS_ZEITFENSTER,
+    NAEHE_ANZAHL,
+    NAEHE_AUSSEN_ANTEIL,
+    NAEHE_NEU_SUCHEN,
+    NAEHE_RING,
+    STANDARD_NAEHE_RADIUS,
     STANDARD_ANZAHL,
     STANDARD_MINUTEN,
     UMWEG_SCHWELLE,
@@ -69,6 +77,11 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # (rund elf Meter) - feiner braucht es niemand, und Nominatim soll
         # nicht fuer jeden Meter Bewegung befragt werden.
         self._adressen: dict[tuple[float, float], str | None] = {}
+        # Haltestellen in der Naehe je unterwegs befindlichem Benutzer. Die
+        # SUCHE wird gemerkt (Punkt, Zeitpunkt, Treffer), die Abfahrten
+        # nicht - die kommen weiter jede Minute frisch.
+        self._naehe_suche: dict[str, dict[str, Any]] = {}
+        self.naehe: dict[str, Any] = {}
 
     @property
     def haltestellen(self) -> list[dict[str, Any]]:
@@ -84,6 +97,140 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.eintrag.options.get(CONF_MODUS) != MODUS_ZEITFENSTER:
             return None
         return int(self.eintrag.options.get(CONF_MINUTEN, STANDARD_MINUTEN))
+
+    @property
+    def naehe_an(self) -> bool:
+        return bool(self.eintrag.options.get(CONF_NAEHE, True))
+
+    @property
+    def naehe_radius(self) -> int:
+        return int(self.eintrag.options.get(CONF_NAEHE_RADIUS,
+                                            STANDARD_NAEHE_RADIUS))
+
+    async def _unterwegs(self) -> dict[str, tuple[float, float]]:
+        """Benutzer, die NICHT zu Hause sind und einen Standort melden.
+
+        Schluessel ist wie bei den Fusswegen der Name des HA-Benutzers - die
+        Karte kennt nur `hass.user.name`. Wer zu Hause ist, braucht keine
+        Umgebungssuche: dafuer gibt es die eingestellten Haltestellen.
+        """
+        weg: dict[str, tuple[float, float]] = {}
+        for zustand in self.hass.states.async_all("person"):
+            if zustand.state == "home":
+                continue
+            breite = zustand.attributes.get("latitude")
+            laenge = zustand.attributes.get("longitude")
+            if breite is None or laenge is None:
+                continue
+            ort = (float(breite), float(laenge))
+            benutzer_id = zustand.attributes.get("user_id")
+            benutzer = (await self.hass.auth.async_get_user(benutzer_id)
+                        if benutzer_id else None)
+            name = (benutzer.name if benutzer and benutzer.name
+                    else zustand.attributes.get("friendly_name"))
+            if name:
+                weg[name] = ort
+        return weg
+
+    async def _umkreis(self, punkt: tuple[float, float]) -> list[dict[str, Any]] | None:
+        """Haltestellen um einen Punkt, nach ECHTER Luftlinie sortiert.
+
+        Eine einzelne VVO-Suche reicht hoechstens ~550 m weit. Gesucht wird
+        am Punkt und an vier Punkten in NAEHE_RING Metern; reicht das nicht
+        fuer NAEHE_ANZAHL Treffer, ein zweites Mal auf einem aeusseren Ring.
+        Zusammengefuehrt wird ueber die Haltestellen-Id. Die Entfernung kommt aus den Koordinaten, nicht aus
+        dem VVO-Feld - das ist keine Luftlinie (siehe api.py).
+
+        None heisst: es kam GAR NICHTS durch (Netz weg). Dann bleibt die
+        letzte Suche stehen, statt die Tafel zu leeren.
+        """
+        b, l = punkt
+        gefunden: dict[str, dict[str, Any]] = {}
+        erfolg = False
+
+        def ring(abstand: float, anzahl: int) -> list[tuple[float, float]]:
+            return [(b + abstand * math.cos(2 * math.pi * k / anzahl) / 111320.0,
+                     l + abstand * math.sin(2 * math.pi * k / anzahl)
+                     / (111320.0 * math.cos(math.radians(b))))
+                    for k in range(anzahl)]
+
+        async def suche(punkte: list[tuple[float, float]]) -> None:
+            nonlocal erfolg
+            for sb, sl in punkte:
+                try:
+                    treffer = await self.api.haltestellen_in_der_naehe(sb, sl, 15)
+                except VvoFehler as f:
+                    _LOGGER.debug("Umgebungssuche bei %.4f,%.4f gescheitert: %s",
+                                  sb, sl, f)
+                    continue
+                erfolg = True
+                for t in treffer:
+                    t["luftlinie"] = int(round(_luftlinie(b, l, t["breite"],
+                                                          t["laenge"])))
+                    gefunden.setdefault(t["id"], t)
+
+        def im_radius() -> list[dict[str, Any]]:
+            return sorted((t for t in gefunden.values()
+                           if t["luftlinie"] <= self.naehe_radius),
+                          key=lambda t: t["luftlinie"])
+
+        await suche([(b, l)] + ring(NAEHE_RING, 4))
+        if (len(im_radius()) < NAEHE_ANZAHL
+                and self.naehe_radius > 2 * NAEHE_RING):
+            await suche(ring(self.naehe_radius * NAEHE_AUSSEN_ANTEIL, 8))
+        if not erfolg:
+            return None
+        return im_radius()
+
+    async def _in_der_naehe(self, unterwegs: dict[str, tuple[float, float]],
+                            schon_geholt: dict[str, Any],
+                            grenze: int) -> dict[str, Any]:
+        """Je unterwegs befindlichem Benutzer die naechsten Haltestellen."""
+        ergebnis: dict[str, Any] = {}
+        jetzt = time.monotonic()
+        for name, punkt in unterwegs.items():
+            alt = self._naehe_suche.get(name)
+            neu_suchen = (
+                alt is None
+                or _luftlinie(*alt["von"], *punkt) >= UMWEG_SCHWELLE
+                or jetzt - alt["zeit"] > NAEHE_NEU_SUCHEN.total_seconds())
+            if neu_suchen:
+                treffer = await self._umkreis(punkt)
+                if treffer is not None:
+                    self._naehe_suche[name] = {"von": punkt, "zeit": jetzt,
+                                               "stellen": treffer[:NAEHE_ANZAHL]}
+            stellen = (self._naehe_suche.get(name) or {}).get("stellen", [])
+
+            tafeln: list[dict[str, Any]] = []
+            for h in stellen:
+                if h["id"] in schon_geholt:
+                    # Liegt eine eingestellte Haltestelle zufaellig in der
+                    # Naehe, wird sie nicht ein zweites Mal abgefragt.
+                    tafel = dict(schon_geholt[h["id"]])
+                    tafel["abfahrten"] = [dict(x) for x in tafel["abfahrten"]]
+                else:
+                    try:
+                        tafel = await self.api.hole_abfahrten(h["id"], grenze)
+                    except VvoFehler:
+                        continue
+                wege = await self._fusswege(h, {name: punkt})
+                weg = wege.get(name)
+                if weg:
+                    for x in tafel["abfahrten"]:
+                        x["erreichbar"] = (not x["faellt_aus"]
+                                           and x["minuten"] >= weg["minuten"])
+                tafeln.append({"haltestelle": h["name"],
+                               "haltestelle_id": h["id"],
+                               "luftlinie": h["luftlinie"],
+                               "weg": weg,
+                               "abfahrten": tafel["abfahrten"]})
+            ergebnis[name] = {"adresse": await self._adresse(punkt),
+                              "haltestellen": tafeln}
+        # Wer wieder zu Hause ist, faellt aus dem Merkzettel.
+        for name in list(self._naehe_suche):
+            if name not in unterwegs:
+                del self._naehe_suche[name]
+        return ergebnis
 
     async def _ausgangspunkte(self) -> dict[str, tuple[float, float]]:
         """Alle Orte, von denen aus gerechnet wird.
@@ -211,6 +358,21 @@ class DvbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     a["erreichbar"] = (not a["faellt_aus"]
                                        and a["minuten"] >= weg["minuten"])
             ergebnis[h["id"]] = tafel
+
+        # In der Naehe: bewusst NACH den eingestellten Haltestellen und in
+        # einem eigenen try - ein Fehler hier darf die Tafel von zu Hause
+        # nicht mitreissen.
+        if self.naehe_an:
+            try:
+                self.naehe = await self._in_der_naehe(
+                    await self._unterwegs(), ergebnis,
+                    HOECHSTZAHL if self.zeitfenster
+                    else min(self.anzahl + VORRAT, HOECHSTZAHL))
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Umgebungssuche fehlgeschlagen")
+                self.naehe = {}
+        else:
+            self.naehe = {}
 
         # Nur aufgeben, wenn ALLE Haltestellen ausfallen. Faellt eine einzelne
         # aus, sollen die uebrigen weiter angezeigt werden statt die ganze

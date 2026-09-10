@@ -17,6 +17,9 @@ Anmeldung; es ist derselbe Dienst, den die DVB-Webseite selbst benutzt.
   Verspätung und Ausfälle.
 * **Fußweg zur Haltestelle**, berechnet für jeden angemeldeten Benutzer
   einzeln – die Karte zeigt jedem, was *er* noch schafft.
+* **Unterwegs: die Haltestellen in deiner Nähe.** Ist ein Benutzer nicht zu
+  Hause und meldet die Companion-App einen Standort, zeigt die Karte oben die
+  drei nächsten Haltestellen samt Abfahrten.
 * Eine mitgelieferte **Abfahrtstafel-Karte**; sie muss nicht getrennt
   installiert werden.
 
@@ -74,6 +77,15 @@ entities:
 Integration holt deshalb mehr Abfahrten, als angezeigt werden – sonst blieben
 von acht angeforderten Zeilen drei übrig, sobald die ersten schon weg sind.
 
+**Unterwegs steht oben „In deiner Nähe · ab <Adresse>“**, darunter die
+eingestellten Haltestellen. Für eine Karte, die nie unterwegs ist – etwa auf
+einem Wandpanel –, lässt sich das abschalten:
+
+```yaml
+type: custom:dvb-tafel-card
+naehe: false
+```
+
 ## Der Fußweg
 
 Berechnet über den Fußgänger-Router von OpenStreetMap
@@ -90,6 +102,27 @@ Ausgangspunkt sich um mehr als 150 Meter verschoben hat; die Adresse wird je
 Punkt einmal erfragt. Ein fremder, kostenloser Dienst ist kein
 Selbstbedienungsladen.
 
+## In der Nähe
+
+Gesucht wird nur für Benutzer, die **nicht zu Hause** sind und einen Standort
+melden. Einstellbar in den Optionen der Integration: an/aus und der
+Suchradius (Standard 1000 m).
+
+Zwei Eigenheiten der VVO-Schnittstelle bestimmen, wie gesucht wird – beide
+gemessen, nicht angenommen:
+
+* **Eine einzelne Umkreissuche reicht höchstens rund 550 m weit**, und nicht
+  gleichmäßig; `limit` erweitert das nicht. Gesucht wird deshalb am Standort
+  und an vier Punkten in 400 m Abstand. Liegen darin weniger als drei
+  Haltestellen im Radius, zusätzlich an acht Punkten weiter außen.
+* **Das Entfernungsfeld der Antwort ist keine Luftlinie** (gemeldet 485 m bei
+  echten 242 m). Die Integration rechnet die Entfernung selbst aus den
+  Koordinaten und filtert danach; angezeigt wird der Fußweg.
+
+Rücksicht auf fremde Dienste: der Standort geht **auf 50 m gerundet** an den
+VVO; neu gesucht wird nur nach 150 m Bewegung oder nach 15 Minuten. Die
+Abfahrten der drei Haltestellen kommen wie alle anderen jede Minute.
+
 ## Sensoren
 
 | | |
@@ -98,6 +131,10 @@ Selbstbedienungsladen.
 | `abfahrten` | Liste: Linie, Ziel, Steig, Verkehrsmittel, Minuten, Verspätung, Ausfall, Auslastung |
 | `fusswege` | Gehzeit und Strecke je Ausgangspunkt |
 | `naechste_erreichbare` | die erste Abfahrt, die bei der aktuellen Gehzeit noch zu schaffen ist |
+
+Dazu `sensor.in_der_nahe_abfahrten`: Zustand ist die Zahl der Benutzer, die
+gerade unterwegs sind; das Attribut `unterwegs` enthält je Benutzer die
+Tafeln der nächsten Haltestellen.
 
 Die Sensoren tragen bewusst **keine `state_class`** – „Minuten bis zur
 nächsten Bahn" zu mitteln wäre ohne Aussage. Wer die Aufzeichnung sparen

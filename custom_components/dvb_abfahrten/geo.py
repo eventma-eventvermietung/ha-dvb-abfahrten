@@ -112,3 +112,28 @@ def gk_nach_wgs84(rechts: float, hoch: float) -> tuple[float, float]:
 
     return _bessel_nach_wgs84(math.degrees(breite),
                               streifen * 3 + math.degrees(dl / co))
+
+def wgs84_nach_gk(breite: float, laenge: float) -> tuple[float, float]:
+    """Breite/Laenge nach Gauss-Krueger (Rechtswert, Hochwert).
+
+    Bewusst KEINE eigene Reihenformel. Die erste Fassung der Hinrichtung war
+    eine aus dem Gedaechtnis und lag 10 km daneben - geprueft gegen selbst
+    ausgedachte Referenzpunkte, also gar nicht. Hier wird stattdessen die
+    gegen OpenStreetMap gepruefte Hinrichtung `gk_nach_wgs84` numerisch
+    umgekehrt (Newton). Damit gibt es nichts Neues, dem man glauben muesste:
+    Rundlauf WGS84 -> GK -> WGS84 ergab an fuenf Punkten zwischen Radebeul
+    und Pirna einen Restfehler von 0,0000 m.
+    """
+    rechts, hoch = 4621000.0, 5660000.0  # Dresden als Startwert
+    for _ in range(30):
+        b0, l0 = gk_nach_wgs84(rechts, hoch)
+        fb, fl = b0 - breite, l0 - laenge
+        if abs(fb) < 1e-11 and abs(fl) < 1e-11:
+            break
+        br, lr = gk_nach_wgs84(rechts + 1.0, hoch)
+        bh, lh = gk_nach_wgs84(rechts, hoch + 1.0)
+        j11, j12, j21, j22 = br - b0, bh - b0, lr - l0, lh - l0
+        det = j11 * j22 - j12 * j21
+        rechts -= (j22 * fb - j12 * fl) / det
+        hoch -= (-j21 * fb + j11 * fl) / det
+    return rechts, hoch

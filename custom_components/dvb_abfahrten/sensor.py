@@ -25,8 +25,9 @@ from .coordinator import DvbCoordinator
 async def async_setup_entry(hass: HomeAssistant, eintrag: ConfigEntry,
                             hinzufuegen: AddEntitiesCallback) -> None:
     koordinator: DvbCoordinator = hass.data[DOMAIN][eintrag.entry_id]
-    hinzufuegen(HaltestelleSensor(koordinator, h)
-                for h in koordinator.haltestellen)
+    hinzufuegen([HaltestelleSensor(koordinator, h)
+                 for h in koordinator.haltestellen]
+                + [NaeheSensor(koordinator)])
 
 
 class HaltestelleSensor(CoordinatorEntity[DvbCoordinator], SensorEntity):
@@ -108,3 +109,53 @@ class HaltestelleSensor(CoordinatorEntity[DvbCoordinator], SensorEntity):
             "abgerufen": datetime.now(timezone.utc).astimezone().isoformat(
                 timespec="seconds"),
         }
+
+
+class NaeheSensor(CoordinatorEntity[DvbCoordinator], SensorEntity):
+    """Haltestellen um jeden Benutzer, der gerade unterwegs ist.
+
+    Zustand: wieviele Benutzer gerade unterwegs sind und eine Umgebungstafel
+    haben. Die Tafeln haengen je Benutzer als Attribut daran; die Karte
+    nimmt sich die des Angemeldeten.
+
+    Der Name ergibt `sensor.in_der_nahe_abfahrten` - er endet bewusst auf
+    `_abfahrten`, damit ein recorder-Ausschluss `sensor.*_abfahrten` ihn
+    mit erfasst. Die Attribute aendern sich jede Minute.
+    """
+
+    _attr_has_entity_name = True
+    _attr_name = "Abfahrten"
+    _attr_icon = "mdi:map-marker-radius"
+
+    def __init__(self, koordinator: DvbCoordinator) -> None:
+        super().__init__(koordinator)
+        eintrag_id = koordinator.eintrag.entry_id
+        self._attr_unique_id = "%s_naehe" % eintrag_id
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "naehe_%s" % eintrag_id)},
+            name="In der Nähe",
+            manufacturer="Verkehrsverbund Oberelbe",
+            model="Haltestellen am Standort",
+        )
+
+    @property
+    def native_value(self) -> int:
+        return sum(1 for n in self.coordinator.naehe.values()
+                   if n.get("haltestellen"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            # Erkennungsmerkmal fuer die Karte - wie haltestelle_id bei den
+            # Haltestellen-Sensoren.
+            "dvb_naehe": True,
+            "aktiv": self.coordinator.naehe_an,
+            "radius": self.coordinator.naehe_radius,
+            "anzeigen": (None if self.coordinator.zeitfenster
+                         else self.coordinator.anzahl),
+            "zeitfenster": self.coordinator.zeitfenster,
+            "unterwegs": self.coordinator.naehe,
+            "abgerufen": datetime.now(timezone.utc).astimezone().isoformat(
+                timespec="seconds"),
+        }
+

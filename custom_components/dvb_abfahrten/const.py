@@ -35,6 +35,31 @@ CONF_SUCHE = "suche"
 CONF_STANDORT = "standort"
 CONF_MODUS = "modus"
 CONF_MINUTEN = "minuten"
+CONF_NAEHE = "naehe"
+CONF_NAEHE_RADIUS = "naehe_radius"
+
+# Haltestellen in der Naehe, wenn jemand unterwegs ist. Drei reichen: mehr
+# ist auf einem Handy nicht mehr "auf einen Blick", und jede weitere kostet
+# jede Minute einen Abruf beim VVO.
+NAEHE_ANZAHL = 3
+STANDARD_NAEHE_RADIUS = 1000
+# Neu SUCHEN (nicht neu abfragen) nur nach Bewegung oder nach dieser Zeit.
+# Die Abfahrten selbst kommen weiter jede Minute.
+NAEHE_NEU_SUCHEN = timedelta(minutes=15)
+# Auf so viele Meter gerundet geht der Standort an den VVO. Fuer "welche
+# Haltestellen sind in der Naehe" genuegt das, und der eigene Aufenthaltsort
+# muss nicht metergenau bei einem Dritten landen.
+NAEHE_RUNDUNG = 50
+# Eine einzelne VVO-Umkreissuche reicht hoechstens ~550 m weit und nicht
+# einmal gleichmaessig; `limit` erweitert das nicht (gemessen 2026-09-10 am
+# Buero: vom Standort aus kam nur EINE Haltestelle, die naechste - 358 m -
+# fehlte). Gesucht wird deshalb am Standort und an vier Punkten in 400 m.
+# Der Wert ist gemessen: bei 400 m fanden sich die drei naechsten, bei 600 m
+# mehr Treffer, aber ausgerechnet die naechste fehlte.
+NAEHE_RING = 400
+# Liegen innen weniger als NAEHE_ANZAHL Haltestellen im Radius (Stadtrand),
+# wird mit acht Punkten auf diesem Bruchteil des Radius nachgesucht.
+NAEHE_AUSSEN_ANTEIL = 0.75
 
 # Zwei Betriebsarten. "anzahl" zeigt immer gleich viele Zeilen, egal wie
 # weit sie in die Zukunft reichen; "zeitfenster" zeigt alles, was in den
