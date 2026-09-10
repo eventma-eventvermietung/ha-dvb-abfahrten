@@ -54,8 +54,59 @@ async def _karte_anmelden(hass: HomeAssistant) -> None:
     # Browser-Zwischenspeicher haengenbleibt. Sie kommt aus der manifest.json,
     # damit sie nicht an zwei Stellen gepflegt werden muss.
     integration = await async_get_integration(hass, DOMAIN)
-    add_extra_js_url(hass, "%s?v=%s" % (KARTE_URL, integration.version))
-    _LOGGER.debug("Abfahrtstafel-Karte angemeldet: %s", KARTE_URL)
+    url = "%s?v=%s" % (KARTE_URL, integration.version)
+
+    add_extra_js_url(hass, url)
+    await _als_ressource_eintragen(hass, url)
+    _LOGGER.debug("Abfahrtstafel-Karte angemeldet: %s", url)
+
+
+async def _als_ressource_eintragen(hass: HomeAssistant, url: str) -> None:
+    """Die Karte zusaetzlich als Lovelace-RESSOURCE fuehren.
+
+    `add_extra_js_url` allein genuegt nicht, und das ist die Lehre aus einem
+    echten Fehlerbild: die Karte zeigte auf einem Dashboard "Konfigurations-
+    fehler", auf einem anderen lief dieselbe Karte einwandfrei. Der
+    Unterschied war ihre POSITION - weit oben wurde sie gezeichnet, bevor das
+    ueber `extra_module_url` eingehaengte Modul ausgefuehrt war.
+
+    Lovelace laedt seine Ressourcen dagegen, BEVOR es Karten baut. Genau
+    deshalb tragen sich andere Integrationen, die eine Karte mitbringen, hier
+    ein - nachgesehen auf einer laufenden Instanz: ha_washdata und bambu_lab
+    machen es beide so.
+
+    Beides zusammen ist unschaedlich: die Kartendatei definiert ihr Element
+    nur, wenn es noch nicht existiert.
+
+    Im YAML-Modus gibt es keine Ressourcenverwaltung - dann bleibt es bei
+    `add_extra_js_url`, und der Fehler oben kann wieder auftreten. Der Nutzer
+    traegt die Ressource dort selbst ein.
+    """
+    lovelace = hass.data.get("lovelace")
+    ressourcen = getattr(lovelace, "resources", None)
+    if ressourcen is None:
+        _LOGGER.debug("Keine Lovelace-Ressourcenverwaltung (YAML-Modus?)")
+        return
+
+    try:
+        if hasattr(ressourcen, "async_get_info"):
+            await ressourcen.async_get_info()
+
+        ohne_version = url.split("?")[0]
+        for vorhanden in ressourcen.async_items():
+            if vorhanden["url"].split("?")[0] != ohne_version:
+                continue
+            if vorhanden["url"] == url:
+                return
+            # Gleiche Datei, andere Version: den Eintrag mitziehen statt einen
+            # zweiten anzulegen - sonst sammeln sich mit jedem Update alte
+            # Zeilen an, und der Browser laedt die Karte mehrfach.
+            await ressourcen.async_update_item(vorhanden["id"], {"url": url})
+            return
+
+        await ressourcen.async_create_item({"res_type": "module", "url": url})
+    except Exception:  # noqa: BLE001 - eine Karte darf das Setup nicht kippen
+        _LOGGER.exception("Ressourceneintrag fehlgeschlagen, %s bleibt", url)
 
 
 async def async_setup_entry(hass: HomeAssistant, eintrag: ConfigEntry) -> bool:

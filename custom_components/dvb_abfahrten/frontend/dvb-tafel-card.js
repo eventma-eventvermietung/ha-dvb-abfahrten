@@ -223,7 +223,12 @@ class DvbTafelCard extends HTMLElement {
   }
 }
 
-customElements.define("dvb-tafel-card", DvbTafelCard);
+// Die Datei kann jetzt auf ZWEI Wegen ins Frontend kommen (extra_module_url
+// und Lovelace-Ressource). Ein zweites define wuerde werfen - also erst
+// nachsehen. Das Element ist in beiden Faellen dasselbe.
+if (!customElements.get("dvb-tafel-card")) {
+  customElements.define("dvb-tafel-card", DvbTafelCard);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
